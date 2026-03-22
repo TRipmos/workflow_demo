@@ -1,5 +1,5 @@
 // Replace [INSERT GOOGLE FORM LINK HERE] with your actual Google Form URL
-const GOOGLE_FORM_URL = "https://forms.google.com";
+const GOOGLE_FORM_URL = "https://forms.gle/MMP9wDWhTFLgmX789";
 
 interface Props {
   onRestart: () => void;
