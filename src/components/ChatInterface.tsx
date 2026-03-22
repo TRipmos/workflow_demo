@@ -11,7 +11,7 @@ const CONVERSATION: ConversationStep[] = [
   {
     field: "destination",
     aiMessage:
-      "Hi there! 👋 I'm Tripmos your AI travel assistant. Let's plan your perfect trip!\n\nWhere are you dreaming of going?",
+      "Hi there! 👋 I'm Tripmos, your travel planning companion. Let's plan your perfect trip!\n\nWhere are you dreaming of going?",
     options: [
       "🗼 Paris",
       "🗾 Tokyo",
@@ -231,7 +231,7 @@ export function ChatInterface({ onComplete }: Props) {
           🤖
         </div>
         <div className="chat-header-info">
-          <div className="chat-header-name">Trip AI</div>
+          <div className="chat-header-name">Tripmos</div>
           <div className="chat-header-status">
             <span className="chat-status-dot" />
             Online
