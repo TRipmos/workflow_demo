@@ -11,7 +11,7 @@ const CONVERSATION: ConversationStep[] = [
   {
     field: "destination",
     aiMessage:
-      "Hi there! 👋 I'm Tripmos, your travel planning companion. Let's plan your perfect trip!\n\nWhere are you dreaming of going?",
+      "Hi there! 👋 I’m Tripmos — here to help you plan your perfect trip.",
     options: [
       "🗼 Paris",
       "🗾 Tokyo",

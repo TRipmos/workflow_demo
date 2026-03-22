@@ -14,7 +14,7 @@ export function LandingScreen({ onStart }: Props) {
       <div className="landing-content">
         <div className="landing-badge">
           <span className="landing-badge-dot" />
-          AI-Powered Travel Planning
+          Tripmos - Your Travel Companion
         </div>
 
         <div className="landing-logo">
@@ -28,9 +28,8 @@ export function LandingScreen({ onStart }: Props) {
         </h1>
 
         <p className="landing-sub">
-          Tell our AI travelling assistant where you want to go, and we'll
-          handle everything — flights, hotels, activities and more. Personalised
-          just for you.
+          Tell Tripmos where you want to go, and get a complete, personalised
+          trip plan in minutes — without jumping between multiple sites.
         </p>
 
         <button className="landing-cta" onClick={onStart}>
