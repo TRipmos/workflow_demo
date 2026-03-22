@@ -29,8 +29,8 @@ export function LandingScreen({ onStart }: Props) {
 
         <p className="landing-sub">
           Tell our AI travelling assistant where you want to go, and we'll
-          handle everything — flights, hotels, local transport, activities and
-          more. Personalised just for you.
+          handle everything — flights, hotels, activities and more. Personalised
+          just for you.
         </p>
 
         <button className="landing-cta" onClick={onStart}>
