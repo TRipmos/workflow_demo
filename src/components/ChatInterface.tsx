@@ -122,7 +122,7 @@ const ORIGIN_OTHER_NUDGE =
 
 // Strip emoji prefix from option labels like "🗼 Paris" → "Paris"
 function cleanOptionValue(option: string): string {
-  return option.replace(/^[\p{Emoji}\s]+/u, "").trim();
+  return option.replace(/^[\p{Emoji}\u{FE0F}\u{200D}\s]+/u, "").trim();
 }
 
 type AccomFilter = "hotel" | "boutique" | "apartment" | "hostel" | "all";
