@@ -32,6 +32,14 @@ export function LandingScreen({ onStart }: Props) {
           trip plan in minutes — without jumping between multiple sites.
         </p>
 
+        <div className="landing-sim-notice">
+          <span aria-hidden="true">🧪</span>
+          <span>
+            This is a <strong>simulated prototype</strong> — prices and options
+            are illustrative. We'd love your feedback on the experience!
+          </span>
+        </div>
+
         <button className="landing-cta" onClick={onStart}>
           Start Planning
           <span className="landing-cta-arrow" aria-hidden="true">

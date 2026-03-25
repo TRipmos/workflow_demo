@@ -1,4 +1,10 @@
-export type AppStep = "landing" | "chat" | "results" | "summary" | "feedback";
+export type AppStep =
+  | "landing"
+  | "chat"
+  | "results"
+  | "summary"
+  | "checkout"
+  | "feedback";
 
 export interface TripPlan {
   destination: string;
