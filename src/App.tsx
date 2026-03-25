@@ -4,6 +4,7 @@ import { LandingScreen } from "./components/LandingScreen";
 import { ChatInterface } from "./components/ChatInterface";
 import { ResultsExploration } from "./components/ResultsExploration";
 import { ItinerarySummary } from "./components/ItinerarySummary";
+import { CheckoutScreen } from "./components/CheckoutScreen";
 import { FeedbackScreen } from "./components/FeedbackScreen";
 import { ProgressIndicator } from "./components/ProgressIndicator";
 
@@ -40,7 +41,11 @@ export default function App() {
     setStep("summary");
   }, []);
 
-  const handleSummaryContinue = useCallback(() => setStep("feedback"), []);
+  const handleSummaryContinue = useCallback(() => setStep("checkout"), []);
+
+  const handleCheckoutProceed = useCallback(() => setStep("feedback"), []);
+
+  const handleCheckoutDecline = useCallback(() => setStep("feedback"), []);
 
   const handleRestart = useCallback(() => {
     setStep("landing");
@@ -53,7 +58,8 @@ export default function App() {
     chat: 1,
     results: 2,
     summary: 3,
-    feedback: 4,
+    checkout: 4,
+    feedback: 5,
   }[step];
 
   return (
@@ -61,7 +67,7 @@ export default function App() {
       {step !== "landing" && (
         <ProgressIndicator
           currentStep={stepNumber}
-          totalSteps={4}
+          totalSteps={5}
           onRestart={handleRestart}
         />
       )}
@@ -82,6 +88,12 @@ export default function App() {
             selectedBookings={selectedBookings}
             onContinue={handleSummaryContinue}
             onRestart={handleRestart}
+          />
+        )}
+        {step === "checkout" && (
+          <CheckoutScreen
+            onProceed={handleCheckoutProceed}
+            onDecline={handleCheckoutDecline}
           />
         )}
         {step === "feedback" && <FeedbackScreen onRestart={handleRestart} />}
