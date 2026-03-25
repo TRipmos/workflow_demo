@@ -9,6 +9,7 @@ import { ProgressIndicator } from "./components/ProgressIndicator";
 
 const EMPTY_TRIP_PLAN: TripPlan = {
   destination: "",
+  origin: "",
   dates: "",
   travellers: "",
   budget: "",
@@ -25,10 +26,14 @@ export default function App() {
 
   const handleStart = useCallback(() => setStep("chat"), []);
 
-  const handleChatComplete = useCallback((plan: TripPlan) => {
-    setTripPlan(plan);
-    setStep("results");
-  }, []);
+  const handleChatComplete = useCallback(
+    (plan: TripPlan, preBookings: SelectedBookings) => {
+      setTripPlan(plan);
+      setSelectedBookings(preBookings);
+      setStep("results");
+    },
+    [],
+  );
 
   const handleResultsDone = useCallback((bookings: SelectedBookings) => {
     setSelectedBookings(bookings);
@@ -67,6 +72,7 @@ export default function App() {
         {step === "results" && (
           <ResultsExploration
             tripPlan={tripPlan}
+            initialBookings={selectedBookings}
             onComplete={handleResultsDone}
           />
         )}

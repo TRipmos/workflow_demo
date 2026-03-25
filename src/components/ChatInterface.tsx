@@ -1,10 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { TripPlan, ChatMessage } from "../types";
+import type {
+  TripPlan,
+  ChatMessage,
+  MockResult,
+  SelectedBookings,
+  ResultCategory,
+} from "../types";
+import { getDestinationData } from "../data/mockData";
 
 interface ConversationStep {
   field: keyof TripPlan;
   aiMessage: string;
   options: string[];
+  type?: "options" | "date-range";
 }
 
 const CONVERSATION: ConversationStep[] = [
@@ -24,15 +32,25 @@ const CONVERSATION: ConversationStep[] = [
     ],
   },
   {
-    field: "dates",
-    aiMessage: "Great choice! ✨\n\nWhen are you planning to travel?",
+    field: "origin",
+    aiMessage: "Great choice! ✨\n\nWhere will you be travelling from?",
     options: [
-      "This month",
-      "Next month",
-      "In 2–3 months",
-      "In 6 months",
-      "Flexible / TBD",
+      "🇬🇧 London",
+      "🇬🇧 Manchester",
+      "🇬🇧 Edinburgh",
+      "🇮🇪 Dublin",
+      "🇳🇱 Amsterdam",
+      "🇩🇪 Frankfurt",
+      "🇺🇸 New York",
+      "🌍 Other city?",
     ],
+  },
+  {
+    field: "dates",
+    aiMessage:
+      "Perfect! 🗓️\n\nWhen are you planning to travel? Pick your exact dates — or go flexible if you're still deciding.",
+    options: [],
+    type: "date-range",
   },
   {
     field: "travellers",
@@ -85,6 +103,7 @@ const SUMMARY_FIELDS: Array<{
   label: string;
 }> = [
   { key: "destination", emoji: "📍", label: "Destination" },
+  { key: "origin", emoji: "🛫", label: "Travelling from" },
   { key: "dates", emoji: "🗓️", label: "Travel dates" },
   { key: "travellers", emoji: "👥", label: "Travellers" },
   { key: "budget", emoji: "💰", label: "Budget" },
@@ -97,13 +116,41 @@ const SOMEWHERE_ELSE_OPTION = "🗺️ Somewhere else?";
 const SOMEWHERE_ELSE_NUDGE =
   "That sounds exciting! 😊\n\nJust a heads-up — this is a simulated prototype to help us understand how you'd plan a trip. The full Tripmos experience will be a fully conversational AI that accepts any destination you type.\n\nFor now, please pick one of the listed cities so we can walk you through the demo and gather your feedback. We promise it's worth it! 👇";
 
+const ORIGIN_OTHER_OPTION = "🌍 Other city?";
+const ORIGIN_OTHER_NUDGE =
+  "No worries! 😊 The full Tripmos experience will let you type any departure city. For this demo, please pick one of the listed cities so we can show you the full experience. 👇";
+
 // Strip emoji prefix from option labels like "🗼 Paris" → "Paris"
 function cleanOptionValue(option: string): string {
-  return option.replace(/^[\p{Emoji}\s]+/u, "").trim();
+  return option.replace(/^[\p{Emoji}\u{FE0F}\u{200D}\s]+/u, "").trim();
 }
 
+type AccomFilter = "hotel" | "boutique" | "apartment" | "hostel" | "all";
+
+function getAccomFilter(accommodation: string): AccomFilter {
+  const a = accommodation.toLowerCase();
+  if (a.includes("boutique") || a.includes("luxury")) return "boutique";
+  if (a.includes("apartment") || a.includes("airbnb")) return "apartment";
+  if (a.includes("hostel") || a.includes("budget")) return "hostel";
+  if (a.includes("hotel")) return "hotel";
+  return "all";
+}
+
+function filterHotels(hotels: MockResult[], filter: AccomFilter): MockResult[] {
+  if (filter === "all") return hotels;
+  return hotels.filter((h) => h.accomType === filter);
+}
+
+const ACCOM_LABELS: Record<AccomFilter, string> = {
+  hotel: "hotels (3–4 star)",
+  boutique: "boutique & luxury hotels",
+  apartment: "apartments & Airbnbs",
+  hostel: "hostels & budget stays",
+  all: "accommodation options",
+};
+
 interface Props {
-  onComplete: (plan: TripPlan) => void;
+  onComplete: (plan: TripPlan, preSelected: SelectedBookings) => void;
 }
 
 export function ChatInterface({ onComplete }: Props) {
@@ -112,6 +159,7 @@ export function ChatInterface({ onComplete }: Props) {
   const [isTyping, setIsTyping] = useState(false);
   const [plan, setPlan] = useState<TripPlan>({
     destination: "",
+    origin: "",
     dates: "",
     travellers: "",
     budget: "",
@@ -120,6 +168,12 @@ export function ChatInterface({ onComplete }: Props) {
   });
   const [showOptions, setShowOptions] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [departure, setDeparture] = useState("");
+  const [returnDate, setReturnDate] = useState("");
+  const [inlinePick, setInlinePick] = useState<
+    "accommodation" | "transport" | null
+  >(null);
+  const [preSelected, setPreSelected] = useState<SelectedBookings>({});
   const messageEndRef = useRef<HTMLDivElement>(null);
   const nextIdRef = useRef(1);
 
@@ -173,6 +227,20 @@ export function ChatInterface({ onComplete }: Props) {
         return;
       }
 
+      // Intercept "Other city?" for origin — same nudge pattern
+      if (option === ORIGIN_OTHER_OPTION) {
+        addMessage("user", option);
+        setShowOptions(false);
+        setIsTyping(true);
+        setTimeout(() => {
+          setIsTyping(false);
+          addMessage("ai", ORIGIN_OTHER_NUDGE);
+          setShowOptions(true);
+          scrollToBottom();
+        }, 1200);
+        return;
+      }
+
       const step = CONVERSATION[currentStep];
       const value = cleanOptionValue(option);
 
@@ -183,6 +251,51 @@ export function ChatInterface({ onComplete }: Props) {
       // Update plan
       const updatedPlan = { ...plan, [step.field]: value };
       setPlan(updatedPlan);
+
+      // After accommodation type → show inline hotel options with prices
+      if (step.field === "accommodation") {
+        const accomType = getAccomFilter(value);
+        const destData = getDestinationData(updatedPlan.destination);
+        const hotels = filterHotels(destData.hotels, accomType);
+        if (hotels.length > 0) {
+          setIsTyping(true);
+          setTimeout(() => {
+            setIsTyping(false);
+            addMessage(
+              "ai",
+              `Here are some ${ACCOM_LABELS[accomType]} in ${updatedPlan.destination} — pick your favourite:`,
+            );
+            setInlinePick("accommodation");
+            setShowOptions(true);
+            scrollToBottom();
+          }, 1400);
+          return;
+        }
+      }
+
+      // After transport type → show inline transport options (Flight or Train)
+      if (step.field === "transport") {
+        const t = value.toLowerCase();
+        if (t === "flight" || t === "train") {
+          const destData = getDestinationData(updatedPlan.destination);
+          const results = t === "flight" ? destData.flights : destData.trains;
+          const label = t === "flight" ? "flights" : "trains";
+          if (results.length > 0) {
+            setIsTyping(true);
+            setTimeout(() => {
+              setIsTyping(false);
+              addMessage(
+                "ai",
+                `Here are available ${label} to ${updatedPlan.destination} — pick your preferred option:`,
+              );
+              setInlinePick("transport");
+              setShowOptions(true);
+              scrollToBottom();
+            }, 1400);
+            return;
+          }
+        }
+      }
 
       const nextStep = currentStep + 1;
 
@@ -206,7 +319,7 @@ export function ChatInterface({ onComplete }: Props) {
           scrollToBottom();
 
           setTimeout(() => {
-            onComplete(updatedPlan);
+            onComplete(updatedPlan, preSelected);
           }, 2800);
         }, 1400);
       }
@@ -216,11 +329,96 @@ export function ChatInterface({ onComplete }: Props) {
       isComplete,
       currentStep,
       plan,
+      preSelected,
       addMessage,
       scrollToBottom,
       onComplete,
     ],
   );
+
+  const handleDateConfirm = useCallback(
+    (dep: string, ret: string) => {
+      if (!dep || !ret || isTyping || isComplete) return;
+      const fmt = (s: string) =>
+        new Date(s + "T00:00:00").toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+      const formatted = `${fmt(dep)} – ${fmt(ret)}`;
+      setDeparture("");
+      setReturnDate("");
+      handleOptionSelect(formatted);
+    },
+    [isTyping, isComplete, handleOptionSelect],
+  );
+
+  const handleInlineResultPick = useCallback(
+    (result: MockResult) => {
+      if (isTyping || isComplete) return;
+
+      const category: ResultCategory =
+        inlinePick === "accommodation"
+          ? "hotels"
+          : plan.transport.toLowerCase() === "train"
+            ? "trains"
+            : "flights";
+
+      const updatedPreSelected = { ...preSelected, [category]: result };
+      setPreSelected(updatedPreSelected);
+
+      addMessage("user", `✓ ${result.name} — ${result.price}`);
+      setShowOptions(false);
+      setInlinePick(null);
+
+      const nextStep = currentStep + 1;
+      if (nextStep < CONVERSATION.length) {
+        setIsTyping(true);
+        setTimeout(() => {
+          setIsTyping(false);
+          addMessage("ai", CONVERSATION[nextStep].aiMessage);
+          setCurrentStep(nextStep);
+          setShowOptions(true);
+          scrollToBottom();
+        }, 1400);
+      } else {
+        setIsTyping(true);
+        setTimeout(() => {
+          setIsTyping(false);
+          setIsComplete(true);
+          setCurrentStep(nextStep);
+          scrollToBottom();
+
+          setTimeout(() => {
+            onComplete(plan, updatedPreSelected);
+          }, 2800);
+        }, 1400);
+      }
+    },
+    [
+      isTyping,
+      isComplete,
+      inlinePick,
+      plan,
+      preSelected,
+      currentStep,
+      addMessage,
+      scrollToBottom,
+      onComplete,
+    ],
+  );
+
+  const inlinePickResults: MockResult[] = (() => {
+    if (!inlinePick || !plan.destination) return [];
+    const data = getDestinationData(plan.destination);
+    if (inlinePick === "accommodation") {
+      return filterHotels(data.hotels, getAccomFilter(plan.accommodation));
+    }
+    const t = plan.transport.toLowerCase();
+    if (t === "flight") return data.flights;
+    if (t === "train") return data.trains;
+    return [];
+  })();
 
   const destinationLabel = cleanOptionValue(plan.destination || "");
 
@@ -316,23 +514,125 @@ export function ChatInterface({ onComplete }: Props) {
         <div ref={messageEndRef} />
       </div>
 
-      {showOptions && !isComplete && currentStep < CONVERSATION.length && (
-        <div className="chat-options">
-          <div className="chat-options-label">Choose an option</div>
-          <div className="chat-options-grid">
-            {CONVERSATION[currentStep].options.map((option) => (
-              <button
-                key={option}
-                className="chat-option-btn"
-                onClick={() => handleOptionSelect(option)}
-                disabled={isTyping}
-              >
-                {option}
-              </button>
-            ))}
+      {showOptions &&
+        !isComplete &&
+        (inlinePick || currentStep < CONVERSATION.length) && (
+          <div className="chat-options">
+            {inlinePick ? (
+              <>
+                <div className="chat-options-label">
+                  {inlinePick === "accommodation"
+                    ? "Pick your accommodation"
+                    : "Pick your transport"}
+                </div>
+                <div className="chat-inline-results">
+                  {inlinePickResults.map((result) => (
+                    <div
+                      key={result.id}
+                      className="chat-inline-result"
+                      onClick={() => handleInlineResultPick(result)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ")
+                          handleInlineResultPick(result);
+                      }}
+                    >
+                      <div className="chat-inline-result-info">
+                        <div className="chat-inline-result-name">
+                          {result.name}
+                        </div>
+                        <div className="chat-inline-result-sub">
+                          {result.subtitle}
+                        </div>
+                        <div className="chat-inline-result-detail">
+                          {result.detail1}
+                        </div>
+                      </div>
+                      <div className="chat-inline-result-right">
+                        <div className="chat-inline-result-price">
+                          {result.price}
+                        </div>
+                        {result.badge && (
+                          <span className="chat-inline-result-badge">
+                            {result.badge}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : CONVERSATION[currentStep].type === "date-range" ? (
+              <>
+                <div className="chat-options-label">
+                  Select your travel dates
+                </div>
+                <div className="chat-datepicker">
+                  <div className="chat-datepicker-row">
+                    <div className="chat-datepicker-field">
+                      <label className="chat-datepicker-label">Departure</label>
+                      <input
+                        type="date"
+                        className="chat-datepicker-input"
+                        min={new Date().toISOString().split("T")[0]}
+                        value={departure}
+                        onChange={(e) => {
+                          setDeparture(e.target.value);
+                          if (returnDate && returnDate < e.target.value)
+                            setReturnDate("");
+                        }}
+                      />
+                    </div>
+                    <div className="chat-datepicker-field">
+                      <label className="chat-datepicker-label">Return</label>
+                      <input
+                        type="date"
+                        className="chat-datepicker-input"
+                        min={
+                          departure || new Date().toISOString().split("T")[0]
+                        }
+                        value={returnDate}
+                        onChange={(e) => setReturnDate(e.target.value)}
+                        disabled={!departure}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    className="chat-datepicker-confirm"
+                    disabled={!departure || !returnDate || isTyping}
+                    onClick={() => handleDateConfirm(departure, returnDate)}
+                  >
+                    Confirm dates →
+                  </button>
+                  <button
+                    className="chat-datepicker-flexible"
+                    disabled={isTyping}
+                    onClick={() => handleOptionSelect("Flexible dates")}
+                  >
+                    I'm flexible on dates
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="chat-options-label">Choose an option</div>
+                <div className="chat-options-grid">
+                  {CONVERSATION[currentStep].options.map((option) => (
+                    <button
+                      key={option}
+                      className="chat-option-btn"
+                      onClick={() => handleOptionSelect(option)}
+                      disabled={isTyping}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }

@@ -7,8 +7,41 @@ import type {
 } from "../types";
 import { getDestinationData, CATEGORY_META } from "../data/mockData";
 
+const OTHER_CATEGORIES: ResultCategory[] = [
+  "hotels",
+  "local",
+  "carHire",
+  "activities",
+];
+
+function getTransportCats(transport: string): ResultCategory[] {
+  const t = transport.toLowerCase();
+  if (t === "flight") return ["flights"];
+  if (t === "train") return ["trains"];
+  if (t === "mix of both" || t === "fastest option")
+    return ["flights", "trains"];
+  return []; // drive — no outbound transport category
+}
+
+type AccomFilter = "hotel" | "boutique" | "apartment" | "hostel" | "all";
+
+function getAccomFilter(accommodation: string): AccomFilter {
+  const a = accommodation.toLowerCase();
+  if (a.includes("boutique") || a.includes("luxury")) return "boutique";
+  if (a.includes("apartment") || a.includes("airbnb")) return "apartment";
+  if (a.includes("hostel") || a.includes("budget")) return "hostel";
+  if (a.includes("hotel")) return "hotel";
+  return "all";
+}
+
+function filterHotels(hotels: MockResult[], filter: AccomFilter): MockResult[] {
+  if (filter === "all") return hotels;
+  return hotels.filter((h) => h.accomType === filter);
+}
+
 interface Props {
   tripPlan: TripPlan;
+  initialBookings?: SelectedBookings;
   onComplete: (bookings: SelectedBookings) => void;
 }
 
@@ -77,21 +110,27 @@ function ResultItem({ result, isSelected, onSelect }: ResultItemProps) {
   );
 }
 
-const CATEGORY_ORDER: ResultCategory[] = [
-  "flights",
-  "trains",
-  "hotels",
-  "local",
-  "carHire",
-  "activities",
-];
+export function ResultsExploration({
+  tripPlan,
+  initialBookings,
+  onComplete,
+}: Props) {
+  const transportCats = getTransportCats(tripPlan.transport);
+  const isDriving = tripPlan.transport.toLowerCase() === "drive";
+  const accomFilter = getAccomFilter(tripPlan.accommodation);
 
-export function ResultsExploration({ tripPlan, onComplete }: Props) {
+  // Auto-open first category that doesn't already have a selection
   const [activeCategory, setActiveCategory] = useState<ResultCategory | null>(
-    null,
+    () => {
+      if (!initialBookings?.hotels) return "hotels";
+      const firstEmpty = OTHER_CATEGORIES.find(
+        (c) => !(initialBookings as Record<string, unknown>)[c],
+      );
+      return firstEmpty ?? null;
+    },
   );
   const [selectedBookings, setSelectedBookings] = useState<SelectedBookings>(
-    {},
+    initialBookings ?? {},
   );
 
   const data = getDestinationData(tripPlan.destination);
@@ -104,7 +143,6 @@ export function ResultsExploration({ tripPlan, onComplete }: Props) {
     (category: ResultCategory, result: MockResult) => {
       setSelectedBookings((prev) => {
         const current = prev[category];
-        // Toggle off if same item selected
         if (current?.id === result.id) {
           const next = { ...prev };
           delete next[category];
@@ -116,11 +154,17 @@ export function ResultsExploration({ tripPlan, onComplete }: Props) {
     [],
   );
 
+  const allCategories = [...transportCats, ...OTHER_CATEGORIES];
   const selectedCount = Object.keys(selectedBookings).length;
-
-  const getCategoryResults = (cat: ResultCategory): MockResult[] => data[cat];
-
   const destinationDisplay = tripPlan.destination || "your destination";
+
+  const ACCOM_LABEL: Record<AccomFilter, string> = {
+    hotel: "Hotels (3–4 star)",
+    boutique: "Boutique / Luxury hotels",
+    apartment: "Apartments & Airbnbs",
+    hostel: "Hostels & budget stays",
+    all: "All accommodation types",
+  };
 
   return (
     <div className="results-screen">
@@ -133,78 +177,118 @@ export function ResultsExploration({ tripPlan, onComplete }: Props) {
         </div>
         <h2 className="results-title">Explore your options</h2>
         <p className="results-subtitle">
-          Click a category to see options · Select your favourites
+          Tailored to your preferences · Select your favourites
         </p>
       </div>
 
-      <div className="results-grid" role="list">
-        {CATEGORY_ORDER.map((cat) => {
-          const meta = CATEGORY_META[cat];
-          const isActive = activeCategory === cat;
-          const hasSelection = cat in selectedBookings;
-          return (
-            <div
-              key={cat}
-              className={`category-card ${isActive ? "active" : ""} ${hasSelection ? "has-selection" : ""}`}
-              onClick={() => handleCategoryClick(cat)}
-              role="listitem button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ")
-                  handleCategoryClick(cat);
-              }}
-              aria-expanded={isActive}
-              aria-label={`${meta.label}${hasSelection ? " — selected" : ""}`}
-            >
-              <span className="category-emoji" aria-hidden="true">
-                {meta.emoji}
-              </span>
-              <div className="category-name">{meta.label}</div>
-              <div className="category-desc">{meta.description}</div>
+      {/* ── Getting there ── */}
+      <div className="results-section">
+        <div className="results-section-label">Getting there</div>
+        {isDriving ? (
+          <div className="results-driving-note">
+            🚗 You're driving to {destinationDisplay}. Need a hire car at the
+            destination? Find options below.
+          </div>
+        ) : (
+          transportCats.map((cat) => (
+            <div key={cat} className="results-transport-block">
+              {transportCats.length > 1 && (
+                <div className="results-transport-sublabel">
+                  {CATEGORY_META[cat].emoji} {CATEGORY_META[cat].label}
+                </div>
+              )}
+              <div className="result-items">
+                {data[cat].map((result) => (
+                  <ResultItem
+                    key={result.id}
+                    result={result}
+                    isSelected={selectedBookings[cat]?.id === result.id}
+                    onSelect={(r) => handleResultSelect(cat, r)}
+                  />
+                ))}
+              </div>
             </div>
-          );
-        })}
+          ))
+        )}
       </div>
 
-      {activeCategory && (
-        <div
-          className="results-panel"
-          role="region"
-          aria-label={`${CATEGORY_META[activeCategory].label} options`}
-        >
-          <div className="results-panel-header">
-            <div className="results-panel-title">
-              <span aria-hidden="true">
-                {CATEGORY_META[activeCategory].emoji}
-              </span>
-              {CATEGORY_META[activeCategory].label} — {destinationDisplay}
-            </div>
-            <button
-              className="results-panel-close"
-              onClick={() => setActiveCategory(null)}
-              aria-label="Close panel"
-            >
-              ×
-            </button>
-          </div>
-
-          <div className="result-items">
-            {getCategoryResults(activeCategory).map((result) => (
-              <ResultItem
-                key={result.id}
-                result={result}
-                isSelected={selectedBookings[activeCategory]?.id === result.id}
-                onSelect={(r) => handleResultSelect(activeCategory, r)}
-              />
-            ))}
-          </div>
+      {/* ── At your destination ── */}
+      <div className="results-section">
+        <div className="results-section-label">At your destination</div>
+        <div className="results-accordion">
+          {OTHER_CATEGORIES.map((cat) => {
+            const meta = CATEGORY_META[cat];
+            const isOpen = activeCategory === cat;
+            const hasSelection = cat in selectedBookings;
+            return (
+              <div key={cat} className="results-accordion-item">
+                <button
+                  className={`results-accordion-trigger ${
+                    isOpen ? "open" : ""
+                  } ${hasSelection ? "has-selection" : ""}`}
+                  onClick={() => handleCategoryClick(cat)}
+                  aria-expanded={isOpen}
+                  aria-label={`${
+                    meta.label
+                  }${hasSelection ? " — selection made" : ""}`}
+                >
+                  <span className="results-accordion-emoji" aria-hidden="true">
+                    {meta.emoji}
+                  </span>
+                  <div className="results-accordion-info">
+                    <div className="results-accordion-name">{meta.label}</div>
+                    <div className="results-accordion-desc">
+                      {hasSelection
+                        ? `✓ ${selectedBookings[cat]!.name}`
+                        : cat === "hotels"
+                          ? ACCOM_LABEL[accomFilter]
+                          : meta.description}
+                    </div>
+                  </div>
+                  <span
+                    className="results-accordion-chevron"
+                    aria-hidden="true"
+                  >
+                    {isOpen ? "▲" : "▼"}
+                  </span>
+                </button>
+                {isOpen && (
+                  <div
+                    className="results-accordion-body"
+                    role="region"
+                    aria-label={`${meta.label} options`}
+                  >
+                    {cat === "hotels" && (
+                      <div className="results-accom-filter-note">
+                        Showing: <strong>{ACCOM_LABEL[accomFilter]}</strong>
+                      </div>
+                    )}
+                    <div className="result-items">
+                      {(cat === "hotels"
+                        ? filterHotels(data[cat], accomFilter)
+                        : data[cat]
+                      ).map((result) => (
+                        <ResultItem
+                          key={result.id}
+                          result={result}
+                          isSelected={selectedBookings[cat]?.id === result.id}
+                          onSelect={(r) => handleResultSelect(cat, r)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
-      )}
+      </div>
 
       <div className="results-footer">
         {selectedCount > 0 && (
           <p className="results-selected-count">
-            <strong>{selectedCount}</strong> of 6 categories selected
+            <strong>{selectedCount}</strong> of {allCategories.length}{" "}
+            categories selected
           </p>
         )}
         <button
@@ -225,7 +309,7 @@ export function ResultsExploration({ tripPlan, onComplete }: Props) {
               textAlign: "center",
             }}
           >
-            Explore the categories above and select your preferred options
+            Pick your transport above, then choose hotels and activities
           </p>
         )}
       </div>
