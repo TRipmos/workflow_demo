@@ -2,6 +2,7 @@ export type AppStep = "landing" | "chat" | "results" | "summary" | "feedback";
 
 export interface TripPlan {
   destination: string;
+  origin: string;
   dates: string;
   travellers: string;
   budget: string;
@@ -27,6 +28,7 @@ export interface MockResult {
   rating: number;
   isBest: boolean;
   badge?: string;
+  accomType?: "hotel" | "boutique" | "apartment" | "hostel";
 }
 
 export interface SelectedBookings {
