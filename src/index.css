@@ -497,6 +497,57 @@ button:focus-visible {
   animation: float 2s ease-in-out infinite;
 }
 
+.landing-partners {
+  margin-top: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.landing-partners-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+.landing-partners-logos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 24px 32px;
+}
+
+.landing-partner-link {
+  display: block;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  transition: background 0.2s ease, transform 0.2s ease;
+  text-decoration: none;
+}
+
+.landing-partner-link:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+}
+
+.landing-partner-logo {
+  height: 64px;
+  width: auto;
+  display: block;
+}
+
+.landing-partner-logo svg {
+  height: 44px;
+  width: auto;
+}
+
 /* ===================================================
    CHAT INTERFACE
    =================================================== */

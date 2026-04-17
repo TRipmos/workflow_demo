@@ -54,6 +54,60 @@ export function LandingScreen({ onStart }: Props) {
           <span className="landing-feature-chip">🚗 Transport</span>
           <span className="landing-feature-chip">🤖 AI-curated</span>
         </div>
+
+        <div className="landing-partners" aria-label="Supported by">
+          <p className="landing-partners-label">Supported by</p>
+          <div className="landing-partners-logos">
+            <a
+              href="https://www.gov.scot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="landing-partner-link"
+            >
+              <img
+                className="landing-partner-logo"
+                src="/logos/scottish-government.png"
+                alt="Scottish Government"
+              />
+            </a>
+            <a
+              href="https://www.techscaler.co.uk/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="landing-partner-link"
+            >
+              <img
+                className="landing-partner-logo"
+                src="/logos/techscaler.png"
+                alt="TechScaler"
+              />
+            </a>
+            <a
+              href="https://www.bgateway.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="landing-partner-link"
+            >
+              <img
+                className="landing-partner-logo"
+                src="/logos/businessgateway.png"
+                alt="Business Gateway"
+              />
+            </a>
+            <a
+              href="https://thisiscodebase.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="landing-partner-link"
+            >
+              <img
+                className="landing-partner-logo"
+                src="/logos/codebase.png"
+                alt="CodeBase"
+              />
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );
