@@ -1,0 +1,154 @@
+import { useState, type FormEvent } from "react";
+
+// TODO: Replace with your deployed Google Apps Script web app URL
+const GOOGLE_SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE";
+
+const TRAVEL_INTERESTS = [
+  "Beach & Relaxation",
+  "City Break",
+  "Adventure & Outdoors",
+  "Cultural & Historical",
+  "Family Holiday",
+  "Road Trip",
+];
+
+interface Props {
+  variant: "landing" | "feedback";
+}
+
+type FormStatus = "idle" | "submitting" | "success" | "error";
+
+export function WaitingListForm({ variant }: Props) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [interests, setInterests] = useState<string[]>([]);
+  const [status, setStatus] = useState<FormStatus>("idle");
+
+  const toggleInterest = (interest: string) => {
+    setInterests((prev) =>
+      prev.includes(interest)
+        ? prev.filter((i) => i !== interest)
+        : [...prev, interest],
+    );
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim()) return;
+
+    setStatus("submitting");
+
+    try {
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          interests: interests.join(", "),
+          source: variant,
+        }),
+      });
+
+      setStatus("success");
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  if (status === "success") {
+    return (
+      <div className={`waitlist-form waitlist-form--${variant}`}>
+        <div className="waitlist-success">
+          <span className="waitlist-success-icon" aria-hidden="true">
+            🎉
+          </span>
+          <p className="waitlist-success-title">You're on the list!</p>
+          <p className="waitlist-success-text">
+            We'll be in touch when Tripmos is ready to launch.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <form
+      className={`waitlist-form waitlist-form--${variant}`}
+      onSubmit={handleSubmit}
+    >
+      <h3 className="waitlist-title">Join the Waiting List</h3>
+      <p className="waitlist-subtitle">
+        Be the first to know when Tripmos launches.
+      </p>
+
+      <div className="waitlist-fields">
+        <input
+          className="waitlist-input"
+          type="text"
+          placeholder="Your name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          disabled={status === "submitting"}
+        />
+        <input
+          className="waitlist-input"
+          type="email"
+          placeholder="Your email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          disabled={status === "submitting"}
+        />
+      </div>
+
+      <fieldset
+        className="waitlist-interests"
+        disabled={status === "submitting"}
+      >
+        <legend className="waitlist-interests-label">
+          What kind of trips interest you?
+        </legend>
+        <div className="waitlist-interests-grid">
+          {TRAVEL_INTERESTS.map((interest) => (
+            <label
+              key={interest}
+              className={`waitlist-interest-chip${interests.includes(interest) ? " selected" : ""}`}
+            >
+              <input
+                type="checkbox"
+                checked={interests.includes(interest)}
+                onChange={() => toggleInterest(interest)}
+                className="visually-hidden"
+              />
+              {interest}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <button
+        type="submit"
+        className="waitlist-submit"
+        disabled={status === "submitting"}
+      >
+        {status === "submitting" ? (
+          <>
+            <span className="waitlist-spinner" aria-hidden="true" />
+            Joining…
+          </>
+        ) : (
+          "Join the Waiting List →"
+        )}
+      </button>
+
+      {status === "error" && (
+        <p className="waitlist-error">
+          Something went wrong. Please try again.
+        </p>
+      )}
+    </form>
+  );
+}

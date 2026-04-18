@@ -1,3 +1,5 @@
+import { WaitingListForm } from "./WaitingListForm";
+
 // Replace [INSERT GOOGLE FORM LINK HERE] with your actual Google Form URL
 const GOOGLE_FORM_URL = "https://forms.gle/MMP9wDWhTFLgmX789";
 
@@ -38,6 +40,8 @@ export function FeedbackScreen({ onRestart }: Props) {
           <div className="feedback-stat-label">personalised</div>
         </div>
       </div>
+
+      <WaitingListForm variant="feedback" />
 
       <a
         href={GOOGLE_FORM_URL}

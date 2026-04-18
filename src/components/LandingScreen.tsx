@@ -1,3 +1,5 @@
+import { WaitingListForm } from "./WaitingListForm";
+
 interface Props {
   onStart: () => void;
 }
@@ -54,6 +56,8 @@ export function LandingScreen({ onStart }: Props) {
           <span className="landing-feature-chip">🚗 Transport</span>
           <span className="landing-feature-chip">🤖 AI-curated</span>
         </div>
+
+        <WaitingListForm variant="landing" />
 
         <div className="landing-partners" aria-label="Supported by">
           <p className="landing-partners-label">Supported by</p>
