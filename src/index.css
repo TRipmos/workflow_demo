@@ -1974,6 +1974,16 @@ button:focus-visible {
   width: 100%;
 }
 
+.waitlist-name-row {
+  display: flex;
+  gap: 10px;
+}
+
+.waitlist-name-row .waitlist-input {
+  flex: 1;
+  min-width: 0;
+}
+
 .waitlist-input {
   width: 100%;
   padding: 12px 16px;

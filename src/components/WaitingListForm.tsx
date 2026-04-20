@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 
-// TODO: Replace with your deployed Google Apps Script web app URL
-const GOOGLE_SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE";
+const GOOGLE_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbwguD0U_htLia0mLwVHuLJyzOor9x6FiDXvwEAMolh6_dw5qlaDgMHVRQ0GXP_hYSJq/exec";
 
 const TRAVEL_INTERESTS = [
   "Beach & Relaxation",
@@ -19,7 +19,8 @@ interface Props {
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
 export function WaitingListForm({ variant }: Props) {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
   const [status, setStatus] = useState<FormStatus>("idle");
@@ -34,21 +35,22 @@ export function WaitingListForm({ variant }: Props) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim()) return;
+    if (!firstName.trim() || !lastName.trim() || !email.trim()) return;
 
     setStatus("submitting");
 
     try {
+      const formData = new FormData();
+      formData.append("firstName", firstName.trim());
+      formData.append("lastName", lastName.trim());
+      formData.append("email", email.trim());
+      formData.append("interests", interests.join(", "));
+      formData.append("source", variant);
+
       await fetch(GOOGLE_SCRIPT_URL, {
         method: "POST",
         mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim(),
-          interests: interests.join(", "),
-          source: variant,
-        }),
+        body: formData,
       });
 
       setStatus("success");
@@ -84,15 +86,26 @@ export function WaitingListForm({ variant }: Props) {
       </p>
 
       <div className="waitlist-fields">
-        <input
-          className="waitlist-input"
-          type="text"
-          placeholder="Your name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          disabled={status === "submitting"}
-        />
+        <div className="waitlist-name-row">
+          <input
+            className="waitlist-input"
+            type="text"
+            placeholder="First name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            required
+            disabled={status === "submitting"}
+          />
+          <input
+            className="waitlist-input"
+            type="text"
+            placeholder="Last name"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            required
+            disabled={status === "submitting"}
+          />
+        </div>
         <input
           className="waitlist-input"
           type="email"
